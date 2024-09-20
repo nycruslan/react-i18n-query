@@ -7,7 +7,7 @@ This guide will walk you through how to quickly set up and use the `NamespaceQue
 To get started, you need to install the required dependencies:
 
 ```bash
-npm install i18next react-i18next i18next-http-backend
+npm install i18next react-i18next i18next-http-backend react-i18n-query
 ```
 
 ## 2. NamespaceQueryHttpBackend Overview
@@ -28,8 +28,7 @@ Create an instance of `i18next` and configure it to use the `NamespaceQueryHttpB
 
 ```typescript
 import { createInstance } from 'i18next';
-import { NamespaceQueryHttpBackend } from './plugin/NamespaceQueryHttpBackend';
-import { processNamespaces } from './utils';
+import { NamespaceQueryHttpBackend, processNamespaces } from 'react-i18n-query';
 
 const { ns } = processNamespaces({
   namespace: 'comments',
@@ -38,11 +37,11 @@ const { ns } = processNamespaces({
   },
 });
 
-const i18n = createInstance({
+export const i18n = createInstance({
   backend: {
     loadPath: 'https://jsonplaceholder.typicode.com/{{ns}}?locale={{lng}}',
     queryStringParams: {
-      _format: 'true',
+      key: 'value', // default query params to be assigned to all namespace
     },
   },
   ns,
@@ -50,7 +49,6 @@ const i18n = createInstance({
   interpolation: {
     escapeValue: false,
   },
-  debug: true,
 }).use(NamespaceQueryHttpBackend);
 
 i18n.init();
@@ -68,7 +66,7 @@ The `processNamespaces` function lets you define namespaces and attach query par
 ### Example Usage:
 
 ```typescript
-import { processNamespaces } from './utils';
+import { processNamespaces } from 'react-i18n-query';
 
 // Define multiple namespaces with query parameters
 const { ns, getNsById, getNs } = processNamespaces([
@@ -85,7 +83,7 @@ const { ns, getNsById, getNs } = processNamespaces([
     },
   },
   {
-    id: 'post4',
+    id: 'post4', // optional id
     namespace: 'comments',
     query: {
       postId: '4',
@@ -189,7 +187,3 @@ createRoot(document.getElementById('root')!).render(
 With `NamespaceQueryHttpBackend` and `processNamespaces`, you can easily manipulate query parameters at the component level and dynamically load translations or other data based on those parameters.
 
 Enjoy using this powerful yet simple library to manage dynamic namespaces in your `i18next` integration!
-
----
-
-This guide provides a clear and simple way to integrate and use the core features of the library. Does this documentation cover all aspects you needed for the Quick Start?
