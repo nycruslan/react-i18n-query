@@ -1,0 +1,60 @@
+{
+  "name": "react-i18n-query",
+  "version": "0.0.1-alpha.1",
+  "description": "A lightweight library for i18n query management in React using i18next.",
+  "keywords": [
+    "i18n",
+    "react",
+    "i18next",
+    "query",
+    "internationalization"
+  ],
+  "author": "Ruslan Shulga <nycruslan@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/react-i18n-query"
+  },
+  "homepage": "https://github.com/yourusername/react-i18n-query#readme",
+  "bugs": {
+    "url": "https://github.com/yourusername/react-i18n-query/issues"
+  },
+  "main": "dist/react-i18n-query.cjs.js",
+  "module": "dist/react-i18n-query.es.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "rimraf dist && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "i18next": "^23.15.1",
+    "i18next-http-backend": "^2.6.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^15.0.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^22.5.5",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^9.9.0",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.9",
+    "globals": "^15.9.0",
+    "rimraf": "^6.0.1",
+    "terser": "^5.33.0",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.0.1",
+    "vite": "^5.4.1",
+    "vite-plugin-dts": "^4.2.1"
+  }
+}
