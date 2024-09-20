@@ -1,6 +1,6 @@
 {
   "name": "react-i18n-query",
-  "version": "0.0.1-alpha.1",
+  "version": "0.0.1-alpha.2",
   "description": "A lightweight library for i18n query management in React using i18next.",
   "keywords": [
     "i18n",
@@ -13,14 +13,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/react-i18n-query"
+    "url": "https://github.com/nycruslan/react-i18n-query"
   },
-  "homepage": "https://github.com/yourusername/react-i18n-query#readme",
+  "homepage": "https://github.com/nycruslan/react-i18n-query?tab=readme-ov-file#quick-start-using-namespacequeryhttpbackend-and-processnamespaces",
   "bugs": {
-    "url": "https://github.com/yourusername/react-i18n-query/issues"
+    "url": "https://github.com/nycruslan/react-i18n-query/issues"
   },
-  "main": "dist/react-i18n-query.cjs.js",
-  "module": "dist/react-i18n-query.es.js",
+  "main": "dist/cjs/react-i18n-query.js",
+  "module": "dist/es/react-i18n-query.js",
   "types": "dist/types/index.d.ts",
   "files": [
     "dist",
