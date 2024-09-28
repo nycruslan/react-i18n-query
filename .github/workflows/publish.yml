@@ -34,22 +34,26 @@ jobs:
           CURRENT_VERSION=$(jq -r '.version' package.json)
           NPM_VERSION=$(npm view react-i18n-query@${CURRENT_VERSION} version || echo 'not_found')
           if [ "$NPM_VERSION" == "$CURRENT_VERSION" ]; then
+            echo "Version $CURRENT_VERSION already exists on npm. Skipping publish."
             echo "should_publish=false" >> $GITHUB_ENV
           else
             echo "New version detected: $CURRENT_VERSION"
             echo "should_publish=true" >> $GITHUB_ENV
           fi
 
-      # Step 5: Build the package
+      # Step 5: Build the package (only if new version)
       - name: Build package
-        run: npm run build
         if: env.should_publish == 'true'
+        run: npm run build
 
-      # Step 6: Publish to npm
+      # Step 6: Publish to npm (only if new version)
       - name: Publish to npm
+        if: env.should_publish == 'true'
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Step 7: Add delay to ensure npm registry is updated
+      - name: Wait for npm registry update
         if: env.should_publish == 'true'
+        run: sleep 60
