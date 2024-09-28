@@ -30,13 +30,13 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
     try {
       const loadPath = await this.resolveLoadPath(lng, baseNamespace);
       if (!loadPath) {
-        return callback(new Error('No loadPath defined'), false);
+        return callback(
+          new Error(`No loadPath defined for namespace: ${baseNamespace}`),
+          false
+        );
       }
 
-      // Do not globally update queryStringParams. Instead, construct the URL with queryParams directly.
       const url = this.constructUrl(loadPath, queryParams);
-
-      // Proceed with the normal load process
       super.loadUrl(url, callback);
     } catch (error) {
       callback(error as Error, false);
@@ -49,7 +49,8 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
    * @returns A tuple containing the base namespace and the query parameters, if any.
    */
   private splitNamespace(ns: string): [string, string?] {
-    return ns.split('$') as [string, string?];
+    const [baseNamespace, queryParams] = ns.split('$');
+    return [baseNamespace, queryParams || ''];
   }
 
   /**
@@ -75,6 +76,7 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
       return Promise.resolve(loadPath([lng], [baseNamespace]));
     }
 
+    console.error(`Unexpected loadPath type: ${typeof loadPath}`);
     return Promise.resolve(undefined);
   }
 
@@ -88,8 +90,8 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
     const url = new URL(loadPath);
 
     if (queryParams) {
-      // Parse queryParams and append them to the URL
-      new URLSearchParams(queryParams).forEach((value, key) => {
+      const searchParams = new URLSearchParams(queryParams);
+      searchParams.forEach((value, key) => {
         url.searchParams.append(key, value);
       });
     }

@@ -1,7 +1,7 @@
 interface NamespaceWithQuery {
   id?: string;
   namespace: string;
-  query: Record<string, string>;
+  query?: Record<string, string>;
 }
 
 /**
@@ -9,9 +9,12 @@ interface NamespaceWithQuery {
  * @param {NamespaceWithQuery} namespaceObject - The namespace object containing the base namespace and query parameters.
  * @returns {string} - A string representation of the namespace with query parameters.
  */
-const processNamespace = ({ namespace, query }: NamespaceWithQuery): string => {
+const processNamespace = ({
+  namespace,
+  query = {},
+}: NamespaceWithQuery): string => {
   const queryString = new URLSearchParams(query).toString();
-  return `${namespace}$${queryString}`;
+  return queryString ? `${namespace}$${queryString}` : namespace;
 };
 
 /**
@@ -21,8 +24,8 @@ const processNamespace = ({ namespace, query }: NamespaceWithQuery): string => {
  * @returns {boolean} - Returns true if the queries match, false otherwise.
  */
 const isQueryMatch = (
-  query1: Record<string, string>,
-  query2: Record<string, string>
+  query1: Record<string, string> = {},
+  query2: Record<string, string> = {}
 ): boolean => {
   const keys1 = Object.keys(query1);
   const keys2 = Object.keys(query2);
