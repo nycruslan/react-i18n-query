@@ -74,14 +74,9 @@ jobs:
 
           # Only create and push a tag if DRY_RUN is not true
           if [ "$DRY_RUN" != "true" ]; then
-            # Check if tag already exists to avoid duplication
-            if ! git tag --list | grep -q "v$CURRENT_VERSION"; then
-              echo "Creating and pushing tag v$CURRENT_VERSION."
-              git tag "v$CURRENT_VERSION"
-              git push origin "v$CURRENT_VERSION"
-            else
-              echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
-            fi
+            echo "Creating and pushing tag v$CURRENT_VERSION."
+            git tag "v$CURRENT_VERSION"
+            git push origin "v$CURRENT_VERSION"
           else
-            echo "Dry-run mode active, skipping tag creation."
+            echo "Dry-run mode active, skipping tag creation and push."
           fi
