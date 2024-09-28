@@ -6,13 +6,13 @@ on:
       - main
     paths:
       - 'package.json'
-  # Optionally, trigger for tags prefixed with 'v'
-  # tags:
-  #   - 'v*'
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,11 +22,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org/'
+          token: ${{ secrets.NPM_TOKEN }}
+          always-auth: true
 
       - name: Install Dependencies
         run: npm ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Lint and Build Package
         run: |
@@ -34,11 +35,12 @@ jobs:
           npm run build
 
       - name: Check and Publish Package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           PACKAGE_NAME=$(node -p "require('./package.json').name")
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Package name: $PACKAGE_NAME"
 
           # Check if the current version is already published
           if npm view "$PACKAGE_NAME@$CURRENT_VERSION" > /dev/null 2>&1; then
