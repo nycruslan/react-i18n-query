@@ -21,7 +21,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Install and Cache Dependencies
         run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -31,24 +31,36 @@ jobs:
           npm run lint
           npm run build
 
-      - name: Check and Publish Package
+      - name: Set Version and Package Name
+        id: version_setup
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          echo "CURRENT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(node -p "require('./package.json').name")" >> $GITHUB_ENV
 
-          echo "Current version: $CURRENT_VERSION"
-          echo "Package name: $PACKAGE_NAME"
-
-          # Check if the current version is already published
+      - name: Check Package Version
+        id: version_check
+        run: |
           if npm view "$PACKAGE_NAME@$CURRENT_VERSION" > /dev/null 2>&1; then
-            echo "Version $CURRENT_VERSION already exists. Skipping publish."
+            echo "version-exists=true" >> $GITHUB_OUTPUT
           else
-            echo "Publishing new version $CURRENT_VERSION."
-            npm publish --access public
+            echo "version-exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
+          CURRENT_VERSION: ${{ env.CURRENT_VERSION }}
 
-            # Create and push a new tag for the version
+      - name: Publish Package
+        if: steps.version_check.outputs.version-exists == 'false'
+        run: |
+          echo "Publishing new version $CURRENT_VERSION."
+          npm publish --access public
+          if [ -z "$(git tag -l "v$CURRENT_VERSION")" ]; then
             git tag "v$CURRENT_VERSION"
             git push origin "v$CURRENT_VERSION"
+          else
+            echo "Tag v$CURRENT_VERSION already exists."
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
+          CURRENT_VERSION: ${{ env.CURRENT_VERSION }}
