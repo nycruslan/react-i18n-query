@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'package.json'
+    # Exclude tag pushes to prevent infinite loops
+    tags-ignore:
+      - 'v*'
 
 jobs:
   publish:
@@ -13,54 +16,55 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '20'
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org/'
 
-      - name: Install and Cache Dependencies
+      - name: Install dependencies
         run: npm ci
+
+      - name: Verify npm auth token
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Lint codebase
+        run: npm run lint
+
+      - name: Build package
+        run: npm run build
+
+      - name: Check if version needs publishing
+        id: version-check
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          git fetch --tags
+          if git tag --list | grep -q "v$CURRENT_VERSION"; then
+            echo "No new version detected. Skipping publish."
+            echo "should-publish=false" >> $GITHUB_ENV
+          else
+            echo "New version detected."
+            echo "should-publish=true" >> $GITHUB_ENV
+          fi
+
+      - name: Publish package (Dry Run)
+        if: env.should-publish == 'true'
+        run: npm publish --access public --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Lint and Build Package
-        run: |
-          npm run lint
-          npm run build
-
-      - name: Set Version and Package Name
-        id: version_setup
-        run: |
-          echo "CURRENT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-          echo "PACKAGE_NAME=$(node -p "require('./package.json').name")" >> $GITHUB_ENV
-
-      - name: Check Package Version
-        id: version_check
-        run: |
-          if npm view "$PACKAGE_NAME@$CURRENT_VERSION" > /dev/null 2>&1; then
-            echo "version-exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "version-exists=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
-          CURRENT_VERSION: ${{ env.CURRENT_VERSION }}
-
-      - name: Publish Package
-        if: steps.version_check.outputs.version-exists == 'false'
-        run: |
-          echo "Publishing new version $CURRENT_VERSION."
-          npm publish --access public
-          if [ -z "$(git tag -l "v$CURRENT_VERSION")" ]; then
-            git tag "v$CURRENT_VERSION"
-            git push origin "v$CURRENT_VERSION"
-          else
-            echo "Tag v$CURRENT_VERSION already exists."
-          fi
+      - name: Publish package
+        if: env.should-publish == 'true'
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
-          CURRENT_VERSION: ${{ env.CURRENT_VERSION }}
+
+      - name: Push tags to GitHub
+        if: env.should-publish == 'true'
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          git tag "v$CURRENT_VERSION"
+          git push origin --tags
