@@ -27,14 +27,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Step 4: Check for new version
-      - name: Verify new version
+      # Step 4: Check if the version is already tagged in Git
+      - name: Check if version is already published
         id: version_check
         run: |
           CURRENT_VERSION=$(jq -r '.version' package.json)
-          NPM_VERSION=$(npm view react-i18n-query@${CURRENT_VERSION} version || echo 'not_found')
-          if [ "$NPM_VERSION" == "$CURRENT_VERSION" ]; then
-            echo "Version $CURRENT_VERSION already exists on npm. Skipping publish."
+          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
+            echo "Version $CURRENT_VERSION already exists as a git tag. Skipping publish."
             echo "should_publish=false" >> $GITHUB_ENV
           else
             echo "New version detected: $CURRENT_VERSION"
@@ -53,7 +52,12 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish --access public
 
-      # Step 7: Add delay to ensure npm registry is updated
-      - name: Wait for npm registry update
+      # Step 7: Tag the new version in Git
+      - name: Tag new version
         if: env.should_publish == 'true'
-        run: sleep 60
+        run: |
+          CURRENT_VERSION=$(jq -r '.version' package.json)
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "v$CURRENT_VERSION"
+          git push origin "v$CURRENT_VERSION"
