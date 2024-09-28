@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'package.json'
+    # Prevents retriggering the workflow on tag pushes
+    tags-ignore:
+      - 'v*'
 
 jobs:
   publish:
@@ -45,12 +48,18 @@ jobs:
           echo "Current version: $CURRENT_VERSION"
           echo "Package name: $PACKAGE_NAME"
 
-          # Check if the current version is already published
-          if npm view "$PACKAGE_NAME@$CURRENT_VERSION" > /dev/null 2>&1; then
+          # Fetch all npm versions
+          ALL_VERSIONS=$(npm view "$PACKAGE_NAME" versions --json)
+
+          # Check if the current version is in the list of published versions
+          if echo "$ALL_VERSIONS" | grep -q "\"$CURRENT_VERSION\""; then
             echo "Version $CURRENT_VERSION already exists. Skipping publish."
           else
             echo "Publishing new version $CURRENT_VERSION."
             npm publish --access public
+
+            # Adding a delay to allow npm registry to reflect the new publish
+            sleep 10
 
             # Create and push a new tag for the version
             git tag "v$CURRENT_VERSION"
