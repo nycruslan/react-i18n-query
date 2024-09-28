@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-          cache: 'npm' # Use built-in caching for npm
+          cache: 'npm'
           registry-url: 'https://registry.npmjs.org/'
 
       - name: Install dependencies
@@ -35,19 +35,26 @@ jobs:
         run: npm run build
 
       - name: Check version bump
+        id: version-check
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           git fetch --tags
-          PREVIOUS_VERSION=$(git tag --sort=-v:refname | head -n 1)
-          if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
-            echo "No version bump detected. Skipping publish."
-            exit 1
+          if git tag --list | grep -q "v$CURRENT_VERSION"; then
+            echo "No new version detected. Skipping publish."
+            echo "::set-output name=should-publish::false"
+          else
+            echo "::set-output name=should-publish::true"
           fi
 
       - name: Publish package
+        if: steps.version-check.outputs.should-publish == 'true'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Push tags to GitHub
-        run: git push --follow-tags
+        if: steps.version-check.outputs.should-publish == 'true'
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          git tag "v$CURRENT_VERSION"
+          git push origin --tags
