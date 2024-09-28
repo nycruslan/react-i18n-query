@@ -1,23 +1,28 @@
 {
   "compilerOptions": {
-    "target": "ES2022", // Latest ECMAScript version for better performance
-    "lib": ["ES2023", "DOM", "DOM.Iterable"], // Libraries for modern JS and DOM APIs
-    "module": "ESNext", // For native ESM support
-    "skipLibCheck": true, // Skip type checking of all declaration files
-    "moduleResolution": "bundler", // Optimized resolution for bundlers like Vite
-    "isolatedModules": true, // Isolate each module for faster compilation
-    "jsx": "react-jsx", // Modern JSX transform (React 17+)
-    "strict": true, // Enable all strict type checking options
-    "noUnusedLocals": true, // Warn on unused local variables
-    "noUnusedParameters": true, // Warn on unused function parameters
-    "noFallthroughCasesInSwitch": true, // Ensure all switch cases are handled
-    "useDefineForClassFields": true, // Correctly handles class field initializers
-    "declaration": true, // Generate declaration files
-    "declarationMap": true, // Optionally generate declaration maps
-    "emitDeclarationOnly": false, // Emit both JS and declaration files
-    "outDir": "dist", // Output JS and declaration files to the dist folder
-    "removeComments": true // Remove comments from the emitted files
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "useDefineForClassFields": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "outDir": "dist",
+    "removeComments": true,
+    "sourceMap": true,
+    "incremental": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "esModuleInterop": true
   },
-  "include": ["src/**/*", "vite.config.ts"], // Include source and config files
-  "exclude": ["node_modules", "dist"] // Exclude unnecessary files
+  "include": ["src/**/*", "vite.config.mts"],
+  "exclude": ["node_modules", "dist", "vite.config.mts"]
 }

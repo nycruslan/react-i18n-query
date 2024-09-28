@@ -1,128 +1,98 @@
-# Quick Start: Using `NamespaceQueryHttpBackend` and `processNamespaces`
+# Quick Start: Using `NamespaceQueryHttpBackend` and `createNsWithQuery`
 
-This guide will walk you through how to quickly set up and use the `NamespaceQueryHttpBackend` plugin along with the `processNamespaces` utility function to handle dynamic query parameters in `i18next` namespaces.
+This guide walks you through setting up and using the `NamespaceQueryHttpBackend` plugin with the `createNsWithQuery` utility for managing dynamic query parameters in `i18next` namespaces.
 
 ## 1. Installation
 
-To get started, you need to install the required dependencies:
+To get started, install the required dependencies:
 
 ```bash
 npm install i18next react-i18next i18next-http-backend react-i18n-query
 ```
 
-## 2. NamespaceQueryHttpBackend Overview
+## 2. Overview
 
-The `NamespaceQueryHttpBackend` plugin extends the `i18next-http-backend` to allow you to pass dynamic query parameters in the namespaces using a `$` separator.
+- **`NamespaceQueryHttpBackend`**: Extends `i18next-http-backend` to allow dynamic query parameters in namespaces using a `$` separator.
+- **`createNsWithQuery`**: Utility to process namespaces and attach query parameters dynamically.
 
-### Example:
+## 3. Setting Up `i18next` with `NamespaceQueryHttpBackend`
 
-```text
-namespace$queryParams
-```
-
-This allows you to fetch data like translations, comments, or any dynamic content based on URL parameters.
-
-## 3. Setting Up the i18next Instance
-
-Create an instance of `i18next` and configure it to use the `NamespaceQueryHttpBackend`:
+Initialize an `i18next` instance using `NamespaceQueryHttpBackend`:
 
 ```typescript
 import { createInstance } from 'i18next';
-import { NamespaceQueryHttpBackend, processNamespaces } from 'react-i18n-query';
+import { NamespaceQueryHttpBackend, createNsWithQuery } from 'react-i18n-query';
 
-const { ns } = processNamespaces({
+// Define a namespace with query parameters
+const { ns } = createNsWithQuery({
   namespace: 'comments',
   query: {
     postId: '1',
   },
 });
 
+// Create and configure the i18next instance
 export const i18n = createInstance({
   backend: {
     loadPath: 'https://jsonplaceholder.typicode.com/{{ns}}?locale={{lng}}',
     queryStringParams: {
-      key: 'value', // default query params to be assigned to all namespace
+      key: 'value', // Default query params applied to all namespaces
     },
   },
   ns,
   fallbackLng: 'en',
-  interpolation: {
-    escapeValue: false,
-  },
+  interpolation: { escapeValue: false },
 }).use(NamespaceQueryHttpBackend);
 
 i18n.init();
 ```
 
-### Explanation:
+### Key Points:
 
-- **Namespace**: The namespace includes both the base name (`comments`) and query parameters (`postId`).
-- **Dynamic Query Parameters**: You can pass additional query parameters like `locale` and `_format` to the backend.
+- **Namespace**: A combination of a base name (`comments`) and query parameters (`postId`).
+- **Dynamic Parameters**: Attach additional parameters like `locale` and `key`.
 
-## 4. Using the `processNamespaces` Utility
+## 4. Using `createNsWithQuery` for Dynamic Namespaces
 
-The `processNamespaces` function lets you define namespaces and attach query parameters dynamically. You can also look up namespaces by `id` or match namespaces by their name and query parameters.
+`createNsWithQuery` lets you create namespaces with dynamic queries and provides functions to retrieve namespaces by ID or query parameters.
 
-### Example Usage:
+### Example Usage
 
 ```typescript
-import { processNamespaces } from 'react-i18n-query';
+import { createNsWithQuery } from 'react-i18n-query';
 
 // Define multiple namespaces with query parameters
-const { ns, getNsById, getNs } = processNamespaces([
-  {
-    namespace: 'comments',
-    query: {
-      postId: '2',
-    },
-  },
-  {
-    namespace: 'comments',
-    query: {
-      postId: '3',
-    },
-  },
-  {
-    id: 'post4', // optional id
-    namespace: 'comments',
-    query: {
-      postId: '4',
-    },
-  },
-  {
-    namespace: 'comments',
-    query: {
-      postId: '5',
-    },
-  },
+const { ns, getNsById, getNs } = createNsWithQuery([
+  { namespace: 'comments', query: { postId: '2' } },
+  { namespace: 'comments', query: { postId: '3' } },
+  { id: 'post4', namespace: 'comments', query: { postId: '4' } }, // Optional ID
+  { namespace: 'comments', query: { postId: '5' } },
 ]);
 ```
 
-### Explanation:
+### Key Points:
 
-- **`ns`**: A string or array of processed namespaces with query parameters.
+- **`ns`**: Array of processed namespaces with query parameters.
 - **`getNsById(id)`**: Retrieve a namespace by its `id`.
-- **`getNs({ namespace, query })`**: Find a namespace by matching both `namespace` and `query`.
+- **`getNs({ namespace, query })`**: Find a namespace by matching both its name and query parameters.
 
-## 5. React Integration with `react-i18next`
+## 5. Integrating with `react-i18next`
 
-Use the `useTranslation` hook from `react-i18next` to translate content based on the namespaces:
+Use `useTranslation` from `react-i18next` to translate content using the processed namespaces:
 
 ```typescript
 import { useTranslation } from 'react-i18next';
 
 function App() {
-  const { t } = useTranslation(ns); // Use the array of namespace strings
+  const { t } = useTranslation(ns);
 
   return (
     <div>
-      {/* Access by array index */}
+      {/* Directly access a namespace by index */}
       <div>{t('1.body')}</div>
-      <br />
-      <div>{t('1.body', { ns: ns[1] })}</div>
-      <br />
+      {/* Access a namespace by ID */}
       <div>{t('1.body', { ns: getNsById('post4') })}</div>
-      <br />
+      {/* Access a namespace by name and query */}
       <div>
         {t('1.body', {
           ns: getNs({ namespace: 'comments', query: { postId: '5' } }),
@@ -133,39 +103,35 @@ function App() {
 }
 ```
 
-### Explanation:
+### Key Points:
 
-- **Access by Array Index**: Directly use the namespace at a specific index in the `ns` array.
-- **Access by ID**: Use `getNsById('post4')` to retrieve a specific namespace by ID.
-- **Access by Namespace and Query**: Use `getNs({ namespace, query })` to dynamically find the namespace.
+- **Namespace Access**: Use `ns` for array index access, `getNsById` for ID-based access, and `getNs` for dynamic access.
 
-## 6. Wrapping the Application with `I18nextProvider`
+## 6. Wrapping Your App with `I18nextProvider`
 
-Finally, wrap your application with the `I18nextProvider` to provide translation capabilities across your app:
+Wrap your app in `I18nextProvider` to provide translation capabilities globally:
 
 ```typescript
 import { Suspense, PropsWithChildren } from 'react';
 import { I18nextProvider } from 'react-i18next';
 
-const ContentProvider = ({ children }: PropsWithChildren) => {
-  return (
-    <I18nextProvider i18n={i18n} defaultNS="comments">
-      <Suspense fallback={<p>Loading...</p>}>{children}</Suspense>
-    </I18nextProvider>
-  );
-};
+const ContentProvider = ({ children }: PropsWithChildren) => (
+  <I18nextProvider i18n={i18n} defaultNS="comments">
+    <Suspense fallback={<p>Loading...</p>}>{children}</Suspense>
+  </I18nextProvider>
+);
 
 export default ContentProvider;
 ```
 
-### Explanation:
+### Key Points:
 
-- **Suspense**: Ensures a loading fallback while translations are being loaded.
-- **`I18nextProvider`**: Provides the i18n instance throughout your app, enabling translation with namespaces.
+- **Suspense Fallback**: Displays a fallback while translations are loading.
+- **Global i18n Access**: Provides the `i18next` instance throughout your app.
 
-## 7. Full Example
+## 7. Full Integration Example
 
-Here’s a full example of how everything works together:
+Here’s an example bringing everything together:
 
 ```typescript
 import React from 'react';
@@ -184,6 +150,6 @@ createRoot(document.getElementById('root')!).render(
 
 ## 8. Conclusion
 
-With `NamespaceQueryHttpBackend` and `processNamespaces`, you can easily manipulate query parameters at the component level and dynamically load translations or other data based on those parameters.
+By using `NamespaceQueryHttpBackend` and `createNsWithQuery`, you can easily integrate dynamic query parameters into your `i18next` namespaces, making your translations flexible and component-level customizable.
 
-Enjoy using this powerful yet simple library to manage dynamic namespaces in your `i18next` integration!
+Enjoy using these tools to simplify your translation management in React apps!

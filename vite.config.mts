@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import dts from 'vite-plugin-dts';
-import path from 'path';
+import path from 'node:path';
 
 export default defineConfig({
   plugins: [
@@ -10,22 +10,20 @@ export default defineConfig({
       insertTypesEntry: true,
       outDir: 'dist/types',
       tsconfigPath: './tsconfig.json',
+      rollupTypes: true,
     }),
   ],
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/index.ts'),
+      entry: path.resolve('src/index.ts'),
       name: 'ReactI18nQuery',
       formats: ['es', 'cjs', 'umd'],
-      fileName: (format) => {
-        if (format === 'es') {
-          return `es/react-i18n-query.js`;
-        }
-        if (format === 'cjs') {
-          return `cjs/react-i18n-query.js`;
-        }
-        return `umd/react-i18n-query.js`;
-      },
+      fileName: (format) =>
+        format === 'es'
+          ? `es/react-i18n-query.js`
+          : format === 'cjs'
+          ? `cjs/react-i18n-query.js`
+          : `umd/react-i18n-query.js`,
     },
     rollupOptions: {
       external: [

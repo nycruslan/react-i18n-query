@@ -1,6 +1,7 @@
 {
   "name": "react-i18n-query",
-  "version": "0.0.1-alpha.4",
+  "version": "0.0.1-alpha.5",
+  "type": "module",
   "description": "A lightweight library for i18n query management in React using i18next.",
   "keywords": [
     "i18n",
@@ -15,23 +16,35 @@
     "type": "git",
     "url": "https://github.com/nycruslan/react-i18n-query"
   },
-  "homepage": "https://github.com/nycruslan/react-i18n-query?tab=readme-ov-file#quick-start-using-namespacequeryhttpbackend-and-processnamespaces",
+  "homepage": "https://github.com/nycruslan/react-i18n-query#readme",
   "bugs": {
     "url": "https://github.com/nycruslan/react-i18n-query/issues"
   },
   "main": "dist/cjs/react-i18n-query.js",
   "module": "dist/es/react-i18n-query.js",
   "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/es/react-i18n-query.js"
+      },
+      "require": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/cjs/react-i18n-query.js"
+      }
+    }
+  },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "dev": "vite",
     "build": "rimraf dist && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "prepare": "npm run build",
+    "publish": "npm publish --access public"
   },
   "peerDependencies": {
     "i18next": "^23.15.1",
