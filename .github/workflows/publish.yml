@@ -1,4 +1,4 @@
-name: Publish Package
+name: Publish Package (Dry Run)
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
           npm run lint
           npm run build
 
-      - name: Check and Publish Package
+      - name: Check and Publish Package (Dry Run)
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -48,20 +48,26 @@ jobs:
           echo "Current version: $CURRENT_VERSION"
           echo "Package name: $PACKAGE_NAME"
 
-          # Fetch all npm versions
-          ALL_VERSIONS=$(npm view "$PACKAGE_NAME" versions --json)
+          # Fetch all npm versions with `npm info` to ensure accuracy
+          ALL_VERSIONS=$(npm info "$PACKAGE_NAME" versions --json)
 
           # Check if the current version is in the list of published versions
           if echo "$ALL_VERSIONS" | grep -q "\"$CURRENT_VERSION\""; then
             echo "Version $CURRENT_VERSION already exists. Skipping publish."
           else
-            echo "Publishing new version $CURRENT_VERSION."
-            npm publish --access public
+            echo "Publishing new version $CURRENT_VERSION (Dry Run)."
+            # Perform a dry-run to test the publish without actually publishing
+            npm publish --access public --dry-run
 
-            # Adding a delay to allow npm registry to reflect the new publish
-            sleep 10
+            # Adding a longer delay to allow npm registry to reflect the new publish
+            sleep 30
 
-            # Create and push a new tag for the version
-            git tag "v$CURRENT_VERSION"
-            git push origin "v$CURRENT_VERSION"
+            # Check if tag already exists to avoid duplication
+            if git tag --list | grep -q "v$CURRENT_VERSION"; then
+              echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
+            else
+              echo "Creating and pushing tag v$CURRENT_VERSION."
+              git tag "v$CURRENT_VERSION"
+              git push origin "v$CURRENT_VERSION"
+            fi
           fi
