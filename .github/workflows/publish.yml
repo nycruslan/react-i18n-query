@@ -69,7 +69,9 @@ jobs:
           if ! git tag --list | grep -q "v$CURRENT_VERSION"; then
             echo "Creating and pushing tag v$CURRENT_VERSION."
             git tag "v$CURRENT_VERSION"
-            git push origin "v$CURRENT_VERSION"
+
+            # Add [skip ci] to commit message to prevent workflow from triggering again
+            git push origin "v$CURRENT_VERSION" -o ci.skip
           else
             echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
           fi
