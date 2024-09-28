@@ -6,11 +6,6 @@ on:
       - main
     paths:
       - 'package.json'
-    tags:
-      - 'v*'
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
 
 jobs:
   publish:
@@ -25,44 +20,47 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          registry-url: 'https://registry.npmjs.org/'
-          token: ${{ secrets.NPM_TOKEN }}
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install dependencies
+      - name: Install and Cache Dependencies
         run: npm ci
-
-      - name: Lint codebase
-        run: npm run lint
-
-      - name: Build package
-        run: npm run build
-
-      - name: Check if version needs publishing
-        id: version-check
-        run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if npm view "$(node -p "require('./package.json').name")@$CURRENT_VERSION" > /dev/null 2>&1; then
-            echo "Version $CURRENT_VERSION already exists on npm registry. Skipping publish."
-            echo "should-publish=false" >> $GITHUB_ENV
-          else
-            echo "New version $CURRENT_VERSION detected."
-            echo "should-publish=true" >> $GITHUB_ENV
-          fi
-
-      - name: Publish package and push tag
-        if: env.should-publish == 'true'
-        run: |
-          npm publish --access public
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          git tag "v$CURRENT_VERSION"
-          git push origin "v$CURRENT_VERSION"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Lint and Build Package
+        run: |
+          npm run lint
+          npm run build
+
+      - name: Set Version and Package Name
+        id: version_setup
+        run: |
+          echo "CURRENT_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$(node -p "require('./package.json').name")" >> $GITHUB_ENV
+
+      - name: Check Package Version
+        id: version_check
+        run: |
+          if npm view "$PACKAGE_NAME@$CURRENT_VERSION" > /dev/null 2>&1; then
+            echo "version-exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "version-exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
+          CURRENT_VERSION: ${{ env.CURRENT_VERSION }}
+
+      - name: Publish Package
+        if: steps.version_check.outputs.version-exists == 'false'
+        run: |
+          echo "Publishing new version $CURRENT_VERSION."
+          npm publish --access public
+          if [ -z "$(git tag -l "v$CURRENT_VERSION")" ]; then
+            git tag "v$CURRENT_VERSION"
+            git push origin "v$CURRENT_VERSION"
+          else
+            echo "Tag v$CURRENT_VERSION already exists."
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGE_NAME: ${{ env.PACKAGE_NAME }}
+          CURRENT_VERSION: ${{ env.CURRENT_VERSION }}
