@@ -1,4 +1,4 @@
-name: Test Publish Package
+name: Publish Package
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - 'package.json'
 
 jobs:
-  test-publish:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -46,12 +46,9 @@ jobs:
         run: npm run build
         if: steps.version_check.outputs.should_publish == 'true'
 
-      # Step 6: Test npm publish (Dry Run)
-      - name: Test npm publish (Dry Run)
-        run: npm publish --dry-run
+      # Step 6: Publish to npm
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         if: steps.version_check.outputs.should_publish == 'true'
-
-      # Step 7: Prevent Workflow Loops
-      - name: Stop workflow loop
-        if: github.actor == 'github-actions[bot]'
-        run: echo "Stopping workflow triggered by GitHub Actions itself."
