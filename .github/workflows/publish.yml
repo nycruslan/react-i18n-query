@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      DRY_RUN: true # Set this to `true` for testing mode
 
     steps:
       - name: Checkout code
@@ -40,7 +41,7 @@ jobs:
           npm run lint
           npm run build
 
-      - name: Check and Publish Package (Dry Run)
+      - name: Check and Publish Package
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -53,25 +54,34 @@ jobs:
             echo "Version $CURRENT_VERSION already exists. Skipping publish."
             exit 0
           else
-            echo "Publishing new version $CURRENT_VERSION (dry-run)."
+            echo "Publishing new version $CURRENT_VERSION (dry-run: $DRY_RUN)."
 
-            # Dry-run publish to test the workflow without actually publishing
-            npm publish --access public --dry-run || PUBLISH_EXIT_CODE=$?
+            # Dry-run or real publish based on DRY_RUN variable
+            if [ "$DRY_RUN" == "true" ]; then
+              # Dry-run publish to test the workflow without actually publishing
+              npm publish --access public --dry-run || PUBLISH_EXIT_CODE=$?
+            else
+              # Real publish
+              npm publish --access public || PUBLISH_EXIT_CODE=$?
+            fi
 
-            # If dry-run publish fails, handle the error
+            # If publish fails, handle the error
             if [ -n "$PUBLISH_EXIT_CODE" ] && [ "$PUBLISH_EXIT_CODE" -eq 1 ]; then
-              echo "Dry-run publish returned exit code 1, indicating a potential issue."
+              echo "Publish returned exit code 1, indicating a potential issue."
               exit 0
             fi
           fi
 
-          # Check if tag already exists to avoid duplication
-          if ! git tag --list | grep -q "v$CURRENT_VERSION"; then
-            echo "Creating and pushing tag v$CURRENT_VERSION."
-            git tag "v$CURRENT_VERSION"
-
-            # Add [skip ci] to commit message to prevent workflow from triggering again
-            git push origin "v$CURRENT_VERSION" -o ci.skip
+          # Only create and push a tag if DRY_RUN is not true
+          if [ "$DRY_RUN" != "true" ]; then
+            # Check if tag already exists to avoid duplication
+            if ! git tag --list | grep -q "v$CURRENT_VERSION"; then
+              echo "Creating and pushing tag v$CURRENT_VERSION."
+              git tag "v$CURRENT_VERSION"
+              git push origin "v$CURRENT_VERSION"
+            else
+              echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
+            fi
           else
-            echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
+            echo "Dry-run mode active, skipping tag creation."
           fi
