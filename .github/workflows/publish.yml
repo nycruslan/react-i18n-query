@@ -49,6 +49,12 @@ jobs:
       - name: Publish to npm
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          CURRENT_VERSION=$(jq -r '.version' package.json)
+          NPM_VERSION=$(npm view react-i18n-query@${CURRENT_VERSION} version || echo 'not_found')
+          if [ "$NPM_VERSION" == "$CURRENT_VERSION" ]; then
+            echo "Version $CURRENT_VERSION already exists on npm, skipping publish."
+            exit 0
+          fi
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
