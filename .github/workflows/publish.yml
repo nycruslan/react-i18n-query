@@ -13,8 +13,6 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # This allows write access to push tags
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -65,17 +63,5 @@ jobs:
             # Check if the error was specifically a "version already exists" error
             if [ "$PUBLISH_EXIT_CODE" == "1" ]; then
               echo "Publish returned exit code 1, but this might be due to a timing issue. Continuing..."
-            fi
-
-            # Adding a longer delay to allow npm registry to reflect the new publish
-            sleep 30
-
-            # Check if tag already exists to avoid duplication
-            if git tag --list | grep -q "v$CURRENT_VERSION"; then
-              echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
-            else
-              echo "Creating and pushing tag v$CURRENT_VERSION."
-              git tag "v$CURRENT_VERSION"
-              git push origin "v$CURRENT_VERSION"
             fi
           fi
