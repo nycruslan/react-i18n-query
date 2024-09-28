@@ -1,0 +1,1 @@
+export { NamespaceQueryHttpBackend } from './NamespaceQueryHttpBackend';

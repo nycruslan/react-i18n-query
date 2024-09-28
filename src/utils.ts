@@ -1,20 +1,26 @@
 interface NamespaceWithQuery {
   id?: string;
-  namespace: string;
+  namespace: string | string[];
   query?: Record<string, string>;
 }
 
 /**
- * Processes a single namespace object into a string with query parameters.
- * @param {NamespaceWithQuery} namespaceObject - The namespace object containing the base namespace and query parameters.
- * @returns {string} - A string representation of the namespace with query parameters.
+ * Processes a namespace or an array of namespaces into a string or an array of strings with query parameters.
+ * If `namespace` is an array, query parameters are applied to all namespaces.
+ * @param {NamespaceWithQuery} namespaceObject - The namespace object containing the base namespace(s) and query parameters.
+ * @returns {string[]} - An array of strings representing the processed namespace(s) with query parameters.
  */
 const processNamespace = ({
   namespace,
   query = {},
-}: NamespaceWithQuery): string => {
+}: NamespaceWithQuery): string[] => {
   const queryString = new URLSearchParams(query).toString();
-  return queryString ? `${namespace}$${queryString}` : namespace;
+  if (Array.isArray(namespace)) {
+    return namespace.map(
+      (ns) => `${ns}${queryString ? `$${queryString}` : ''}`
+    );
+  }
+  return [`${namespace}${queryString ? `$${queryString}` : ''}`];
 };
 
 /**
@@ -27,61 +33,74 @@ const isQueryMatch = (
   query1: Record<string, string> = {},
   query2: Record<string, string> = {}
 ): boolean => {
+  if (query1 === query2) return true; // Shortcut for identical objects
   const keys1 = Object.keys(query1);
   const keys2 = Object.keys(query2);
+  if (keys1.length !== keys2.length) return false; // Early exit if key lengths differ
 
-  if (keys1.length !== keys2.length) return false; // Short-circuit if lengths differ
+  for (const key of keys1) {
+    if (query1[key] !== query2[key]) return false; // Early exit if any value differs
+  }
 
-  return keys1.every((key) => query1[key] === query2[key]);
+  return true;
 };
 
 /**
- * Processes a namespace or an array of namespaces, converting them into a string format with query parameters,
- * and optionally providing lookup functions by id or by namespace and query.
+ * Creates a string or an array of strings from namespace(s) with optional query parameters.
+ * Optionally provides lookup functions by id or by namespace and query.
  *
  * @param {NamespaceWithQuery | NamespaceWithQuery[]} ns - A single namespace object or an array of namespaces.
  * @returns {Object} - An object containing:
- *   - `ns`: A string or an array of strings representing the processed namespaces with query parameters.
+ *   - `ns`: A string array representing the processed namespaces with query parameters.
  *   - `getNsById`: A function that returns a namespace string by id or undefined if no id exists.
  *   - `getNs`: A function that returns a fully processed namespace string by matching namespace and query.
  */
-export const processNamespaces = (
+export const createNsWithQuery = (
   ns: NamespaceWithQuery | NamespaceWithQuery[]
 ): {
-  ns: string | string[];
+  ns: string[];
   getNsById: (id: string) => string | undefined;
   getNs: (search: {
     namespace: string;
     query: Record<string, string>;
   }) => string | undefined;
 } => {
-  // Handle the case where `ns` is a single object
-  if (!Array.isArray(ns)) {
-    return {
-      ns: processNamespace(ns),
-      getNsById: () => undefined,
-      getNs: () => undefined,
-    };
+  // Normalize `ns` into an array
+  const namespaceArray = Array.isArray(ns) ? ns : [ns];
+
+  // Map each namespace by id or index, and flatten the processed strings directly
+  const namespaceMap = new Map<string, string[]>();
+
+  for (const [index, item] of namespaceArray.entries()) {
+    const key = item.id || `${index}`;
+    namespaceMap.set(key, processNamespace(item));
   }
 
-  // Use Map for efficient lookups
-  const namespaceMap = new Map<string, string>();
+  // Flatten the namespace strings once for efficient lookups
+  const flattenedNs = Array.from(namespaceMap.values()).flat();
 
-  ns.forEach((item, index) => {
-    const key = item.id || `${index}`; // Fallback to index if id is not provided
-    namespaceMap.set(key, processNamespace(item));
-  });
+  // Optimize `getNsById` lookup by caching flat strings
+  const nsByIdCache = new Map(
+    [...namespaceMap.entries()].map(([key, value]) => [key, value.join('|')])
+  );
 
   return {
-    ns: Array.from(namespaceMap.values()), // Return array of namespace strings
-    getNsById: (id: string) => namespaceMap.get(id), // Retrieve namespace by id
+    ns: flattenedNs,
+    getNsById: (id: string) => nsByIdCache.get(id),
     getNs: ({ namespace, query }) => {
-      const foundNamespace = ns.find(
+      // Find the matching namespace
+      const foundNamespace = namespaceArray.find(
         (item) =>
           item.namespace === namespace && isQueryMatch(item.query, query)
       );
 
-      return foundNamespace ? processNamespace(foundNamespace) : undefined; // Retrieve and process namespace by namespace and query
+      // Process and return the namespace as a string
+      if (foundNamespace) {
+        const processedNs = processNamespace(foundNamespace);
+        return processedNs.join('|');
+      }
+
+      return undefined;
     },
   };
 };

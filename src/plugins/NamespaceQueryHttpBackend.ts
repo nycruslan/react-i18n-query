@@ -9,11 +9,6 @@ import type { ReadCallback, Services } from 'i18next';
  * Example namespace format: "namespace$queryString"
  */
 export class NamespaceQueryHttpBackend extends HttpBackend {
-  /**
-   * Constructs a new NamespaceQueryHttpBackend instance.
-   * @param services i18next services
-   * @param options HttpBackend options
-   */
   constructor(services: Services, options: HttpBackendOptions = {}) {
     super(services, options);
   }
@@ -30,12 +25,14 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
     try {
       const loadPath = await this.resolveLoadPath(lng, baseNamespace);
       if (!loadPath) {
-        return callback(
+        callback(
           new Error(`No loadPath defined for namespace: ${baseNamespace}`),
           false
         );
+        return; // Early return to avoid further execution
       }
 
+      // Construct the URL with query parameters
       const url = this.constructUrl(loadPath, queryParams);
       super.loadUrl(url, callback);
     } catch (error) {
@@ -48,9 +45,18 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
    * @param ns The namespace string, which may contain a query string after "$".
    * @returns A tuple containing the base namespace and the query parameters, if any.
    */
-  private splitNamespace(ns: string): [string, string?] {
-    const [baseNamespace, queryParams] = ns.split('$');
-    return [baseNamespace, queryParams || ''];
+  private splitNamespace(ns: string): [string, URLSearchParams?] {
+    const indexOfSeparator = ns.indexOf('$');
+    if (indexOfSeparator === -1) {
+      // Return early if there is no query string
+      return [ns];
+    }
+
+    // Separate baseNamespace and queryParams
+    const baseNamespace = ns.substring(0, indexOfSeparator);
+    const queryParams = new URLSearchParams(ns.substring(indexOfSeparator + 1));
+
+    return [baseNamespace, queryParams];
   }
 
   /**
@@ -67,6 +73,7 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
     const { loadPath } = this.options;
 
     if (typeof loadPath === 'string') {
+      // Direct replacement using template literals
       return Promise.resolve(
         loadPath.replace('{{ns}}', baseNamespace).replace('{{lng}}', lng)
       );
@@ -76,8 +83,7 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
       return Promise.resolve(loadPath([lng], [baseNamespace]));
     }
 
-    console.error(`Unexpected loadPath type: ${typeof loadPath}`);
-    return Promise.resolve(undefined);
+    throw new Error(`Unexpected loadPath type: ${typeof loadPath}`);
   }
 
   /**
@@ -86,14 +92,18 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
    * @param queryParams The optional query string parameters to append to the load path.
    * @returns The fully constructed URL with query parameters.
    */
-  private constructUrl(loadPath: string, queryParams?: string): string {
+  private constructUrl(
+    loadPath: string,
+    queryParams?: URLSearchParams
+  ): string {
+    // Reuse the URL object to avoid multiple allocations
     const url = new URL(loadPath);
 
-    if (queryParams) {
-      const searchParams = new URLSearchParams(queryParams);
-      searchParams.forEach((value, key) => {
+    if (queryParams && queryParams.toString()) {
+      // Append only if there are query parameters
+      for (const [key, value] of queryParams.entries()) {
         url.searchParams.append(key, value);
-      });
+      }
     }
 
     return url.toString();
