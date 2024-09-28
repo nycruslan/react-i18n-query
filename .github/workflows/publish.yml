@@ -27,38 +27,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Step 4: Check if the version is already published on npm
-      - name: Check NPM registry for existing version
+      # Step 4: Check for new version
+      - name: Verify new version
         id: version_check
         run: |
           CURRENT_VERSION=$(jq -r '.version' package.json)
-          NPM_VERSION=$(npm view react-i18n-query@$CURRENT_VERSION version || echo "not_found")
+          NPM_VERSION=$(npm view react-i18n-query@${CURRENT_VERSION} version || echo 'not_found')
           if [ "$NPM_VERSION" == "$CURRENT_VERSION" ]; then
-            echo "Version $CURRENT_VERSION already exists on npm. Skipping publish."
             echo "should_publish=false" >> $GITHUB_ENV
           else
             echo "New version detected: $CURRENT_VERSION"
             echo "should_publish=true" >> $GITHUB_ENV
           fi
 
-      # Step 5: Build the package (only if new version)
+      # Step 5: Build the package (only if a new version is detected)
       - name: Build package
-        if: env.should_publish == 'true'
         run: npm run build
-
-      # Step 6: Publish to npm (only if new version)
-      - name: Publish to npm
         if: env.should_publish == 'true'
+
+      # Step 6: Publish to npm (only if a new version is detected)
+      - name: Publish to npm
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm publish --access public
-
-      # Step 7: Tag the new version in Git (only if new version)
-      - name: Tag new version
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         if: env.should_publish == 'true'
-        run: |
-          CURRENT_VERSION=$(jq -r '.version' package.json)
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git tag "v$CURRENT_VERSION"
-          git push origin "v$CURRENT_VERSION"
+
+      # Step 7: Avoid Infinite Loop by skipping bot commits
+      - name: Skip GitHub Actions bot commits
+        if: github.actor == 'github-actions[bot]'
+        run: echo "Commit by GitHub Actions bot, skipping publish."
