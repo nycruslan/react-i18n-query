@@ -1,6 +1,6 @@
 {
   "name": "react-i18n-query",
-  "version": "0.0.1-alpha.13",
+  "version": "0.0.1-alpha.12",
   "type": "module",
   "description": "A lightweight library for i18n query management in React using i18next.",
   "keywords": [

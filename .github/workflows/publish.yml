@@ -1,4 +1,4 @@
-name: Publish Package (Dry Run)
+name: Publish Package
 
 on:
   push:
@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      DRY_RUN: true # Environment variable to indicate dry run
 
     steps:
       - name: Checkout code
@@ -41,7 +40,7 @@ jobs:
           npm run lint
           npm run build
 
-      - name: Check and Publish Package (Dry Run)
+      - name: Check and Publish Package
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -56,26 +55,18 @@ jobs:
           if echo "$ALL_VERSIONS" | grep -q "\"$CURRENT_VERSION\""; then
             echo "Version $CURRENT_VERSION already exists. Skipping publish."
           else
-            echo "Publishing new version $CURRENT_VERSION (Dry Run)."
+            echo "Publishing new version $CURRENT_VERSION."
+            npm publish --access public
 
-            # Perform a dry-run to test the publish without actually publishing
-            if [ "$DRY_RUN" = "true" ]; then
-              npm publish --access public --dry-run
-              echo "Dry run complete. Exiting to prevent infinite loop."
-              exit 0
+            # Adding a longer delay to allow npm registry to reflect the new publish
+            sleep 30
+
+            # Check if tag already exists to avoid duplication
+            if git tag --list | grep -q "v$CURRENT_VERSION"; then
+              echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
             else
-              npm publish --access public
-
-              # Adding a longer delay to allow npm registry to reflect the new publish
-              sleep 30
-
-              # Check if tag already exists to avoid duplication
-              if git tag --list | grep -q "v$CURRENT_VERSION"; then
-                echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
-              else
-                echo "Creating and pushing tag v$CURRENT_VERSION."
-                git tag "v$CURRENT_VERSION"
-                git push origin "v$CURRENT_VERSION"
-              fi
+              echo "Creating and pushing tag v$CURRENT_VERSION."
+              git tag "v$CURRENT_VERSION"
+              git push origin "v$CURRENT_VERSION"
             fi
           fi
