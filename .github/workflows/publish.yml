@@ -9,49 +9,41 @@ on:
     tags:
       - 'v*'
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
-
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          registry-url: 'https://registry.npmjs.org/'
-          token: ${{ secrets.NPM_TOKEN }}
 
-      - name: Install, Lint, and Build
+      - name: Install and Cache Dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Lint and Build Package
         run: |
-          npm ci
           npm run lint
           npm run build
 
-      - name: Check if version needs publishing
-        id: version-check
+      - name: Check and Publish Package
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if npm view "$(node -p "require('./package.json').name")@$CURRENT_VERSION" > /dev/null 2>&1; then
-            echo "Version $CURRENT_VERSION already exists on npm registry. Skipping publish."
-            echo "should-publish=false" >> $GITHUB_ENV
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          if npm view "$PACKAGE_NAME@$CURRENT_VERSION" > /dev/null 2>&1; then
+            echo "Version $CURRENT_VERSION already exists. Skipping publish."
           else
-            echo "New version $CURRENT_VERSION detected."
-            echo "should-publish=true" >> $GITHUB_ENV
+            echo "Publishing new version $CURRENT_VERSION."
+            npm publish --access public
+            git tag "v$CURRENT_VERSION"
+            git push origin "v$CURRENT_VERSION"
           fi
-
-      - name: Publish package and push tag
-        if: env.should-publish == 'true'
-        run: |
-          npm publish --access public
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          git tag "v$CURRENT_VERSION"
-          git push origin "v$CURRENT_VERSION"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
