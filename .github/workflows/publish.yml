@@ -34,9 +34,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Debug Log
+      - name: Log publishing details
         run: |
-          echo "Publishing completed. Current environment:"
+          echo "Publishing completed."
           echo "GITHUB_REF: $GITHUB_REF"
           echo "GITHUB_SHA: $GITHUB_SHA"
           echo "GITHUB_ACTOR: $GITHUB_ACTOR"
