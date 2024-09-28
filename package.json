@@ -1,6 +1,6 @@
 {
   "name": "react-i18n-query",
-  "version": "0.0.1-beta.9",
+  "version": "0.0.1-beta.10",
   "type": "module",
   "description": "A lightweight library for i18n query management in React using i18next.",
   "keywords": [
@@ -42,8 +42,7 @@
   ],
   "scripts": {
     "build": "rimraf dist && vite build",
-    "lint": "eslint .",
-    "publish": "npm publish --access public"
+    "lint": "eslint ."
   },
   "peerDependencies": {
     "i18next": "^23.15.1",
