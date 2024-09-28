@@ -34,7 +34,7 @@ jobs:
       - name: Build package
         run: npm run build
 
-      - name: Check version bump
+      - name: Check if version needs publishing
         id: version-check
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
@@ -47,14 +47,14 @@ jobs:
             echo "should-publish=true" >> $GITHUB_ENV
           fi
 
-      - name: Publish package (Dry Run for Testing)
+      - name: Publish package (Dry Run)
         if: env.should-publish == 'true'
         run: npm publish --access public --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish package (Actual Publish)
-        if: github.event_name != 'pull_request' && env.should-publish == 'true'
+      - name: Publish package
+        if: env.should-publish == 'true'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
