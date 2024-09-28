@@ -54,6 +54,7 @@ jobs:
           # Check if the current version is in the list of published versions
           if echo "$ALL_VERSIONS" | grep -q "\"$CURRENT_VERSION\""; then
             echo "Version $CURRENT_VERSION already exists. Skipping publish."
+            exit 0
           else
             echo "Publishing new version $CURRENT_VERSION."
 
