@@ -34,21 +34,22 @@ jobs:
           CURRENT_VERSION=$(jq -r '.version' package.json)
           NPM_VERSION=$(npm view react-i18n-query@${CURRENT_VERSION} version || echo 'not_found')
           if [ "$NPM_VERSION" == "$CURRENT_VERSION" ]; then
-            echo "This version ($CURRENT_VERSION) already exists on npm."
-            echo "::set-output name=should_publish::false"
+            echo "should_publish=false" >> $GITHUB_ENV
           else
             echo "New version detected: $CURRENT_VERSION"
-            echo "::set-output name=should_publish::true"
+            echo "should_publish=true" >> $GITHUB_ENV
           fi
 
       # Step 5: Build the package
       - name: Build package
         run: npm run build
-        if: steps.version_check.outputs.should_publish == 'true'
+        if: env.should_publish == 'true'
 
       # Step 6: Publish to npm
       - name: Publish to npm
-        run: npm publish --access public
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        if: steps.version_check.outputs.should_publish == 'true'
+        if: env.should_publish == 'true'
