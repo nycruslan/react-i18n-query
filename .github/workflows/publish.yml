@@ -40,7 +40,7 @@ jobs:
           npm run lint
           npm run build
 
-      - name: Check and Publish Package
+      - name: Check and Publish Package (Dry Run)
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -48,34 +48,28 @@ jobs:
           echo "Current version: $CURRENT_VERSION"
           echo "Package name: $PACKAGE_NAME"
 
-          # Fetch all npm versions with `npm info` to ensure accuracy
-          ALL_VERSIONS=$(npm info "$PACKAGE_NAME" versions --json)
-
-          # Check if the current version is in the list of published versions
-          if echo "$ALL_VERSIONS" | grep -q "\"$CURRENT_VERSION\""; then
+          # Check if the current version is already published
+          if npm view "$PACKAGE_NAME@$CURRENT_VERSION" > /dev/null 2>&1; then
             echo "Version $CURRENT_VERSION already exists. Skipping publish."
             exit 0
           else
-            echo "Publishing new version $CURRENT_VERSION."
+            echo "Publishing new version $CURRENT_VERSION (dry-run)."
 
-            # Publish the package and capture the exit code
-            npm publish --access public || PUBLISH_EXIT_CODE=$?
+            # Dry-run publish to test the workflow without actually publishing
+            npm publish --access public --dry-run || PUBLISH_EXIT_CODE=$?
 
-            # Check if the error was specifically a "version already exists" error
-            if [ "$PUBLISH_EXIT_CODE" == "1" ]; then
-              echo "Publish returned exit code 1, indicating a potential timing issue or conflict."
+            # If dry-run publish fails, handle the error
+            if [ -n "$PUBLISH_EXIT_CODE" ] && [ "$PUBLISH_EXIT_CODE" -eq 1 ]; then
+              echo "Dry-run publish returned exit code 1, indicating a potential issue."
               exit 0
             fi
+          fi
 
-            # Adding a longer delay to allow npm registry to reflect the new publish
-            sleep 30
-
-            # Check if tag already exists to avoid duplication
-            if git tag --list | grep -q "v$CURRENT_VERSION"; then
-              echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
-            else
-              echo "Creating and pushing tag v$CURRENT_VERSION."
-              git tag "v$CURRENT_VERSION"
-              git push origin "v$CURRENT_VERSION"
-            fi
+          # Check if tag already exists to avoid duplication
+          if ! git tag --list | grep -q "v$CURRENT_VERSION"; then
+            echo "Creating and pushing tag v$CURRENT_VERSION."
+            git tag "v$CURRENT_VERSION"
+            git push origin "v$CURRENT_VERSION"
+          else
+            echo "Tag v$CURRENT_VERSION already exists. Skipping tag creation."
           fi
