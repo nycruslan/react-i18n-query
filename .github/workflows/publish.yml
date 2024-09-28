@@ -10,8 +10,6 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -22,12 +20,11 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          registry-url: 'https://registry.npmjs.org/'
-          token: ${{ secrets.NPM_TOKEN }}
-          always-auth: true
 
       - name: Install Dependencies
         run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Lint and Build Package
         run: |
@@ -53,3 +50,5 @@ jobs:
             git tag "v$CURRENT_VERSION"
             git push origin "v$CURRENT_VERSION"
           fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
