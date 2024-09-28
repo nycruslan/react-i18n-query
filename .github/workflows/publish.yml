@@ -41,19 +41,26 @@ jobs:
           git fetch --tags
           if git tag --list | grep -q "v$CURRENT_VERSION"; then
             echo "No new version detected. Skipping publish."
-            echo "::set-output name=should-publish::false"
+            echo "should-publish=false" >> $GITHUB_ENV
           else
-            echo "::set-output name=should-publish::true"
+            echo "New version detected."
+            echo "should-publish=true" >> $GITHUB_ENV
           fi
 
-      - name: Publish package
-        if: steps.version-check.outputs.should-publish == 'true'
+      - name: Publish package (Dry Run for Testing)
+        if: env.should-publish == 'true'
+        run: npm publish --access public --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish package (Actual Publish)
+        if: github.event_name != 'pull_request' && env.should-publish == 'true'
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Push tags to GitHub
-        if: steps.version-check.outputs.should-publish == 'true'
+        if: env.should-publish == 'true'
         run: |
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           git tag "v$CURRENT_VERSION"
