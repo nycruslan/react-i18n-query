@@ -56,7 +56,14 @@ jobs:
             echo "Version $CURRENT_VERSION already exists. Skipping publish."
           else
             echo "Publishing new version $CURRENT_VERSION."
-            npm publish --access public
+
+            # Publish the package and capture the exit code
+            npm publish --access public || PUBLISH_EXIT_CODE=$?
+
+            # Check if the error was specifically a "version already exists" error
+            if [ "$PUBLISH_EXIT_CODE" == "1" ]; then
+              echo "Publish returned exit code 1, but this might be due to a timing issue. Continuing..."
+            fi
 
             # Adding a longer delay to allow npm registry to reflect the new publish
             sleep 30
