@@ -19,21 +19,30 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
+          cache: 'npm' # Use built-in caching for npm
           registry-url: 'https://registry.npmjs.org/'
-
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify npm auth token
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Lint codebase
+        run: npm run lint
+
       - name: Build package
         run: npm run build
+
+      - name: Check version bump
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          git fetch --tags
+          PREVIOUS_VERSION=$(git tag --sort=-v:refname | head -n 1)
+          if [ "$CURRENT_VERSION" = "$PREVIOUS_VERSION" ]; then
+            echo "No version bump detected. Skipping publish."
+            exit 1
+          fi
 
       - name: Publish package
         run: npm publish --access public
