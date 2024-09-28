@@ -13,6 +13,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # This allows write access to push tags
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
