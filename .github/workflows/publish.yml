@@ -1,4 +1,4 @@
-name: Publish Package
+name: Test Publish Package
 
 on:
   push:
@@ -6,77 +6,47 @@ on:
       - main
     paths:
       - 'package.json'
-    # Prevents retriggering the workflow on tag pushes
-    tags-ignore:
-      - 'v*'
 
 jobs:
-  publish:
+  test-publish:
     runs-on: ubuntu-latest
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      DRY_RUN: true # Set this to `true` for testing mode
 
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Step 2: Set up Node.js
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: 'lts/*'
           cache: 'npm'
-          registry-url: 'https://registry.npmjs.org/'
-          token: ${{ secrets.NPM_TOKEN }}
-          always-auth: true
 
-      - name: Verify npm auth token
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-
-      - name: Install Dependencies
+      # Step 3: Install dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: Lint and Build Package
+      # Step 4: Check for new version
+      - name: Verify new version
+        id: version_check
         run: |
-          npm run lint
-          npm run build
-
-      - name: Check and Publish Package
-        run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          PACKAGE_NAME=$(node -p "require('./package.json').name")
-
-          echo "Current version: $CURRENT_VERSION"
-          echo "Package name: $PACKAGE_NAME"
-
-          # Check if the current version is already published
-          if npm view "$PACKAGE_NAME@$CURRENT_VERSION" > /dev/null 2>&1; then
-            echo "Version $CURRENT_VERSION already exists. Skipping publish."
-            exit 0
+          CURRENT_VERSION=$(jq -r '.version' package.json)
+          NPM_VERSION=$(npm view react-i18n-query@${CURRENT_VERSION} version || echo 'not_found')
+          if [ "$NPM_VERSION" == "$CURRENT_VERSION" ]; then
+            echo "This version ($CURRENT_VERSION) already exists on npm."
+            echo "::set-output name=should_publish::false"
           else
-            echo "Publishing new version $CURRENT_VERSION (dry-run: $DRY_RUN)."
-
-            # Dry-run or real publish based on DRY_RUN variable
-            if [ "$DRY_RUN" == "true" ]; then
-              # Dry-run publish to test the workflow without actually publishing
-              npm publish --access public --dry-run || PUBLISH_EXIT_CODE=$?
-            else
-              # Real publish
-              npm publish --access public || PUBLISH_EXIT_CODE=$?
-            fi
-
-            # If publish fails, handle the error
-            if [ -n "$PUBLISH_EXIT_CODE" ] && [ "$PUBLISH_EXIT_CODE" -eq 1 ]; then
-              echo "Publish returned exit code 1, indicating a potential issue."
-              exit 0
-            fi
+            echo "New version detected: $CURRENT_VERSION"
+            echo "::set-output name=should_publish::true"
           fi
 
-          # Only create and push a tag if DRY_RUN is not true
-          if [ "$DRY_RUN" != "true" ]; then
-            echo "Creating and pushing tag v$CURRENT_VERSION."
-            git tag "v$CURRENT_VERSION"
-            git push origin "v$CURRENT_VERSION"
-          else
-            echo "Dry-run mode active, skipping tag creation and push."
-          fi
+      # Step 5: Build the package
+      - name: Build package
+        run: npm run build
+        if: steps.version_check.outputs.should_publish == 'true'
+
+      # Step 6: Test Publish to npm (Dry Run)
+      - name: Test npm publish (Dry Run)
+        run: npm publish --dry-run
+        if: steps.version_check.outputs.should_publish == 'true'
