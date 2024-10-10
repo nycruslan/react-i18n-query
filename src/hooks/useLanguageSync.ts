@@ -43,6 +43,22 @@ export const useLanguageSync = (
     [getCookieValue]
   );
 
+  // Immediately synchronize language on first render
+  const language = memoizedGetCookieValue(cookieKey);
+
+  if (language && i18nInstance.language !== language && autoChange) {
+    try {
+      i18nInstance.changeLanguage(language);
+      setCurrentLang(language);
+    } catch (error) {
+      if (onError) {
+        onError(
+          new Error(`Failed to sync language: ${(error as Error).message}`)
+        );
+      }
+    }
+  }
+
   useEffect(() => {
     try {
       const language = memoizedGetCookieValue(cookieKey); // Use the custom or default getter
@@ -51,9 +67,7 @@ export const useLanguageSync = (
         setCurrentLang(language); // Set the current language if found
       }
 
-      if (autoChange && language && i18nInstance.language !== language) {
-        i18nInstance.changeLanguage(language);
-      }
+      // No need for `autoChange` inside useEffect if handled immediately
     } catch (error) {
       if (onError) {
         onError(
@@ -61,7 +75,7 @@ export const useLanguageSync = (
         );
       }
     }
-  }, [i18nInstance, cookieKey, autoChange, memoizedGetCookieValue, onError]);
+  }, [i18nInstance, cookieKey, memoizedGetCookieValue, onError]);
 
   return currentLang; // Return current language if needed in the component
 };
