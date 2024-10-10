@@ -20,23 +20,30 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
    * @param callback The callback to invoke when the translation is loaded.
    */
   async read(lng: string, ns: string, callback: ReadCallback): Promise<void> {
-    const [baseNamespace, queryParams] = this.splitNamespace(ns);
+    // Check if the namespace includes query parameters using the "$" separator
+    if (ns.includes('$')) {
+      // Custom handling when query parameters are included
+      const [baseNamespace, queryParams] = this.splitNamespace(ns);
 
-    try {
-      const loadPath = await this.resolveLoadPath(lng, baseNamespace);
-      if (!loadPath) {
-        callback(
-          new Error(`No loadPath defined for namespace: ${baseNamespace}`),
-          false
-        );
-        return; // Early return to avoid further execution
+      try {
+        const loadPath = await this.resolveLoadPath(lng, baseNamespace);
+        if (!loadPath) {
+          callback(
+            new Error(`No loadPath defined for namespace: ${baseNamespace}`),
+            false
+          );
+          return;
+        }
+
+        // Construct the URL with query parameters
+        const url = this.constructUrl(loadPath, queryParams);
+        super.loadUrl(url, callback); // Reuse original `loadUrl` to fetch the data
+      } catch (error) {
+        callback(error as Error, false);
       }
-
-      // Construct the URL with query parameters
-      const url = this.constructUrl(loadPath, queryParams);
-      super.loadUrl(url, callback);
-    } catch (error) {
-      callback(error as Error, false);
+    } else {
+      // Delegate to the original `read` method if no query parameters are present
+      super.read(lng, ns, callback);
     }
   }
 
@@ -82,8 +89,7 @@ export class NamespaceQueryHttpBackend extends HttpBackend {
     if (typeof loadPath === 'function') {
       return Promise.resolve(loadPath([lng], [baseNamespace]));
     }
-
-    throw new Error(`Unexpected loadPath type: ${typeof loadPath}`);
+    return Promise.reject(new Error('No valid loadPath found.'));
   }
 
   /**
