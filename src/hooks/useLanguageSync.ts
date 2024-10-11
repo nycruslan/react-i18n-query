@@ -23,6 +23,7 @@ interface UseLanguageSyncOptions {
 
 /**
  * Custom hook to synchronize i18n language based on cookie value or custom getter function.
+ * Ensures that language is synced immediately on the first render.
  * @param {i18n} i18nInstance - The i18n instance.
  * @param {UseLanguageSyncOptions} options - Options to configure the behavior.
  */
@@ -35,7 +36,7 @@ export const useLanguageSync = (
     onError,
   }: UseLanguageSyncOptions = {}
 ) => {
-  const [currentLang, setCurrentLang] = useState<string | null>(null);
+  const [currentLang, setCurrentLang] = useState<string>(i18nInstance.language);
 
   // Memoize the getCookieValue to avoid function re-creation on every render
   const memoizedGetCookieValue = useCallback(
@@ -43,39 +44,30 @@ export const useLanguageSync = (
     [getCookieValue]
   );
 
-  // Immediately synchronize language on first render
-  const language = memoizedGetCookieValue(cookieKey);
-
-  if (language && i18nInstance.language !== language && autoChange) {
-    try {
-      i18nInstance.changeLanguage(language);
-      setCurrentLang(language);
-    } catch (error) {
-      if (onError) {
-        onError(
-          new Error(`Failed to sync language: ${(error as Error).message}`)
-        );
-      }
-    }
-  }
-
+  // Perform initial language sync synchronously before the first render
   useEffect(() => {
-    try {
-      const language = memoizedGetCookieValue(cookieKey); // Use the custom or default getter
+    const cookieLanguage = memoizedGetCookieValue(cookieKey);
 
-      if (language) {
-        setCurrentLang(language); // Set the current language if found
+    // Immediately change the language if necessary
+    if (
+      cookieLanguage &&
+      i18nInstance.language !== cookieLanguage &&
+      autoChange
+    ) {
+      try {
+        i18nInstance.changeLanguage(cookieLanguage);
+        setCurrentLang(cookieLanguage);
+      } catch (error) {
+        if (onError) {
+          onError(
+            new Error(`Failed to sync language: ${(error as Error).message}`)
+          );
+        }
       }
-
-      // No need for `autoChange` inside useEffect if handled immediately
-    } catch (error) {
-      if (onError) {
-        onError(
-          new Error(`Failed to sync language: ${(error as Error).message}`)
-        );
-      }
+    } else if (cookieLanguage) {
+      setCurrentLang(cookieLanguage);
     }
-  }, [i18nInstance, cookieKey, memoizedGetCookieValue, onError]);
+  }, [i18nInstance, cookieKey, memoizedGetCookieValue, autoChange, onError]);
 
-  return currentLang; // Return current language if needed in the component
+  return currentLang;
 };
