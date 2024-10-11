@@ -104,3 +104,90 @@ export const createNsWithQuery = (
     },
   };
 };
+
+/**
+ * Configuration for the loadPath function.
+ * @property {string} loadPath - The base URL path for loading resources.
+ * @property {Record<string, string>} [queryStringParams] - Optional default query parameters.
+ */
+export interface LoadPathConfig {
+  loadPath: string;
+  queryStringParams?: Record<string, string>;
+}
+
+/**
+ * Parses a namespace string to extract the base namespace and query parameters.
+ *
+ * @param {string} namespace - The namespace string in the format "baseNamespace$queryString".
+ * @returns {{ baseNamespace: string, queryParams: URLSearchParams }} An object containing the base namespace and query parameters.
+ */
+const parseNamespace = (namespace: string) => {
+  const [baseNamespace, queryString] = namespace.split('$');
+  const queryParams = new URLSearchParams(queryString || ''); // Ensure queryString is not undefined
+  return { baseNamespace, queryParams };
+};
+
+/**
+ * Combines default query parameters with the existing ones.
+ *
+ * @param {URLSearchParams} queryParams - The URLSearchParams object to which default parameters are added.
+ * @param {Record<string, string>} [defaultParams={}] - A record of default query parameters to add.
+ */
+const mergeQueryParams = (
+  queryParams: URLSearchParams,
+  defaultParams: Record<string, string> = {}
+) => {
+  Object.entries(defaultParams).forEach(([key, value]) => {
+    if (!queryParams.has(key)) queryParams.set(key, value); // Avoid overwriting existing params
+  });
+};
+
+/**
+ * Replaces placeholders in a template string with provided replacement values.
+ *
+ * @param {string} template - The template string containing placeholders in the format {{key}}.
+ * @param {Record<string, string>} replacements - An object mapping placeholder keys to their replacement values.
+ * @returns {string} The template string with all placeholders replaced by the corresponding values.
+ */
+const replacePlaceholders = (
+  template: string,
+  replacements: Record<string, string>
+) => {
+  return Object.keys(replacements).reduce(
+    (result, key) => result.replace(`{{${key}}}`, replacements[key]),
+    template
+  );
+};
+
+/**
+ * Creates a loadPath function based on the provided configuration.
+ *
+ * @param {LoadPathConfig} config - The configuration object containing the base load path and optional query string parameters.
+ * @returns {(lngs: string[], namespaces: string[]) => string[]} A function that generates full load paths for given languages and namespaces.
+ */
+export const loadPathWithQueryParams = (
+  config: LoadPathConfig
+): ((lngs: string[], namespaces: string[]) => string[]) => {
+  const { loadPath, queryStringParams = {} } = config;
+
+  return (lngs: string[], namespaces: string[]) => {
+    return lngs.flatMap((lng) =>
+      namespaces.map((namespace) => {
+        const { baseNamespace, queryParams } = parseNamespace(namespace);
+        mergeQueryParams(queryParams, queryStringParams);
+
+        const finalLoadPath = replacePlaceholders(loadPath, {
+          ns: baseNamespace,
+          lng,
+        });
+
+        const separator = finalLoadPath.includes('?') ? '&' : '?';
+        const queryString = queryParams.toString();
+
+        return queryString
+          ? `${finalLoadPath}${separator}${queryString}`
+          : finalLoadPath;
+      })
+    );
+  };
+};

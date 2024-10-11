@@ -1,2 +1,2 @@
-export { createNsWithQuery } from './utils';
+export { createNsWithQuery, loadPathWithQueryParams } from './utils';
 export { useLanguageSync } from './hooks';
